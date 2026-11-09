@@ -60,9 +60,6 @@ st.divider()
 # --- ÁREA DE EXIBIÇÃO PARA OS USUÁRIOS ---
 st.subheader("📋 Lista de Atividades:")
 
-if not taref_mestre := tarefas_mestre:  # apenas para manter limpo
-  pass
-
 if not tarefas_mestre:
   st.info(
       "Ainda não há nenhuma atividade cadastrada pelo administrador. Volte"
