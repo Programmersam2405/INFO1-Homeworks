@@ -5,7 +5,7 @@ import streamlit as st
 ARQUIVO_TAREFAS = "tarefas_mestre.json"
 
 # Defina a sua senha secreta de administrador aqui:
-SENHA_ADMIN = "1234"
+SENHA_ADMIN = "rNUeKNs.9JhADnF"
 
 
 def carregar_tarefas_mestre():
