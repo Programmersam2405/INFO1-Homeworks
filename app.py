@@ -25,8 +25,8 @@ st.set_page_config(page_title="Gerenciador de Tarefas da Turma", page_icon="📚
 
 st.title("📚 Atividades e Para-casa")
 st.write(
-    "Acompanhe suas tarefas. O progresso marcado aqui é apenas seu e fica"
-    " salvo no seu navegador!"
+    "Acompanhe suas tarefas. O progresso marcado aqui é salvo para não se"
+    " perder ao atualizar a página!"
 )
 
 # Carrega a lista oficial de tarefas criada pelo admin
@@ -73,7 +73,7 @@ with st.sidebar:
           opcoes_atualizacao.append(f"{idx}: {t} (Sem prazo)")
         else:
           opcoes_atualizacao.append(
-              f"{idx}: {t.get('texto', '')} (Prazo atual:"
+              f"{idx}: {t.get('texto', '')} (Prazo:"
               f" {t.get('prazo', 'N/D')})"
           )
 
@@ -90,13 +90,11 @@ with st.sidebar:
         idx_atualizar = int(tarefa_para_atualizar.split(":")[0])
         tarefa_atual = tarefas_mestre[idx_atualizar]
 
-        # Mantém o texto original da tarefa
         if isinstance(tarefa_atual, str):
           texto_t = tarefa_atual
         else:
           texto_t = tarefa_atual.get("texto", "")
 
-        # Atualiza com o novo prazo
         tarefas_mestre[idx_atualizar] = {
             "texto": texto_t,
             "prazo": novo_prazo.strftime("%Y-%m-%d"),
@@ -143,15 +141,20 @@ if not tarefas_mestre:
       " mais tarde! 🎉"
   )
 else:
-  # Inicializa o progresso individual na sessão do navegador
+  # Inicializa o progresso individual e recupera dos query_params se já existirem
   if "progresso_individual" not in st.session_state:
     st.session_state.progresso_individual = {}
+    saved_progress = st.query_params.get("progresso", "")
+    if saved_progress:
+      for idx_str in saved_progress.split(","):
+        if idx_str.isdigit():
+          st.session_state.progresso_individual[int(idx_str)] = True
 
   hoje = date.today()
+  indices_concluidos = []
 
   # Mostra as tarefas com caixas de seleção e verificação de prazo
   for i, tarefa in enumerate(tarefas_mestre):
-    # Compatibilidade com tarefas antigas
     if isinstance(tarefa, str):
       texto_tarefa = tarefa
       prazo_str = None
@@ -176,6 +179,14 @@ else:
       label += " 🔴 **[Data limite atingida]**"
 
     concluida = st.checkbox(label, value=status_atual, key=f"user_task_{i}")
-
-    # Atualiza o status apenas na memória daquele usuário
     st.session_state.progresso_individual[i] = concluida
+
+    if concluida:
+      indices_concluidos.append(str(i))
+
+  # Salva o progresso atualizado nos parâmetros da URL para persistir ao atualizar
+  if indices_concluidos:
+    st.query_params["progresso"] = ",".join(indices_concluidos)
+  else:
+    if "progresso" in st.query_params:
+      del st.query_params["progresso"]
