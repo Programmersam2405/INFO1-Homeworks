@@ -1,3 +1,4 @@
+from datetime import date, datetime
 import json
 import os
 import streamlit as st
@@ -5,7 +6,7 @@ import streamlit as st
 ARQUIVO_TAREFAS = "tarefas_mestre.json"
 
 # Defina a sua senha secreta de administrador aqui:
-SENHA_ADMIN = "rNUeKNs.9JhADnF"
+SENHA_ADMIN = "1234"
 
 
 def carregar_tarefas_mestre():
@@ -40,18 +41,52 @@ with st.sidebar:
 
   if senha_digitada == SENHA_ADMIN:
     st.success("Modo Admin Ativado! ✅")
-    nova_tarefa = st.text_input(
-        "Nova atividade:", placeholder="Ex: Livro de História pág. 40"
-    )
 
-    if st.button("➕ Publicar para todo mundo"):
+    # Seção para Adicionar Tarefa
+    st.subheader("➕ Adicionar Nova")
+    nova_tarefa = st.text_input(
+        "Atividade:", placeholder="Ex: Livro de História pág. 40"
+    )
+    prazo_tarefa = st.date_input("Data limite (Prazo):", value=date.today())
+
+    if st.button("Publicar para todo mundo"):
       if nova_tarefa.strip():
-        tarefas_mestre.append(nova_tarefa.strip())
+        tarefa_obj = {
+            "texto": nova_tarefa.strip(),
+            "prazo": prazo_tarefa.strftime("%Y-%m-%d"),
+        }
+        tarefas_mestre.append(tarefa_obj)
         salvar_tarefas_mestre(tarefas_mestre)
         st.success("Atividade publicada com sucesso!")
         st.rerun()
       else:
         st.warning("Digite uma atividade válida.")
+
+    # Seção para Excluir Tarefa
+    if tarefas_mestre:
+      st.divider()
+      st.subheader("🗑️ Gerenciar / Excluir")
+
+      # Cria uma lista com o texto das tarefas para o admin escolher qual apagar
+      opcoes_exclusao = []
+      for idx, t in enumerate(tarefas_mestre):
+        if isinstance(t, str):
+          opcoes_exclusao.append(f"{idx}: {t}")
+        else:
+          opcoes_exclusao.append(f"{idx}: {t.get('texto', '')}")
+
+      tarefa_selecionada = st.selectbox(
+          "Selecione a tarefa para apagar:", opcoes_exclusao
+      )
+
+      if st.button("❌ Excluir tarefa selecionada"):
+        # Pega o número do índice que está no começo da string (ex: "0: Tarefa")
+        idx_para_remover = int(tarefa_selecionada.split(":")[0])
+        tarefas_mestre.pop(idx_para_remover)
+        salvar_tarefas_mestre(tarefas_mestre)
+        st.success("Tarefa excluída com sucesso!")
+        st.rerun()
+
   elif senha_digitada:
     st.error("Senha incorreta!")
 
@@ -66,17 +101,39 @@ if not tarefas_mestre:
       " mais tarde! 🎉"
   )
 else:
-  # Inicializa o progresso individual na sessão do navegador da pessoa que abriu o site
+  # Inicializa o progresso individual na sessão do navegador
   if "progresso_individual" not in st.session_state:
     st.session_state.progresso_individual = {}
 
-  # Mostra as tarefas com caixas de seleção independentes por usuário
-  for i, texto_tarefa in enumerate(tarefas_mestre):
+  hoje = date.today()
+
+  # Mostra as tarefas com caixas de seleção e verificação de prazo
+  for i, tarefa in enumerate(tarefas_mestre):
+    # Compatibilidade com tarefas antigas
+    if isinstance(tarefa, str):
+      texto_tarefa = tarefa
+      prazo_str = None
+    else:
+      texto_tarefa = tarefa.get("texto", "")
+      prazo_str = tarefa.get("prazo", None)
+
     status_atual = st.session_state.progresso_individual.get(i, False)
 
-    concluida = st.checkbox(
-        f"**{texto_tarefa}**", value=status_atual, key=f"user_task_{i}"
-    )
+    # Verifica se o prazo expirou
+    expirado = False
+    texto_prazo_exibicao = ""
+    if prazo_str:
+      data_prazo = datetime.strptime(prazo_str, "%Y-%m-%d").date()
+      texto_prazo_exibicao = f" *(Prazo: {data_prazo.strftime('%d/%m/%Y')})*"
+      if hoje > data_prazo:
+        expirado = True
 
-    # Atualiza o status apenas na memória daquele usuário específico
+    # Monta o visual da checkbox com o aviso se expirou
+    label = f"**{texto_tarefa}**{texto_prazo_exibicao}"
+    if expirado:
+      label += " 🔴 **[Data limite atingida]**"
+
+    concluida = st.checkbox(label, value=status_atual, key=f"user_task_{i}")
+
+    # Atualiza o status apenas na memória daquele usuário
     st.session_state.progresso_individual[i] = concluida
