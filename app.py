@@ -6,7 +6,7 @@ import streamlit as st
 ARQUIVO_TAREFAS = "tarefas_mestre.json"
 
 # Defina a sua senha secreta de administrador aqui:
-SENHA_ADMIN = "rNUeKNs.9JhADnF"
+SENHA_ADMIN = "1234"
 
 
 def carregar_tarefas_mestre():
@@ -62,12 +62,53 @@ with st.sidebar:
       else:
         st.warning("Digite uma atividade válida.")
 
-    # Seção para Excluir Tarefa
     if tarefas_mestre:
+      # Seção para Atualizar Prazo
+      st.divider()
+      st.subheader("✏️ Atualizar Prazo")
+
+      opcoes_atualizacao = []
+      for idx, t in enumerate(tarefas_mestre):
+        if isinstance(t, str):
+          opcoes_atualizacao.append(f"{idx}: {t} (Sem prazo)")
+        else:
+          opcoes_atualizacao.append(
+              f"{idx}: {t.get('texto', '')} (Prazo atual:"
+              f" {t.get('prazo', 'N/D')})"
+          )
+
+      tarefa_para_atualizar = st.selectbox(
+          "Selecione a tarefa para mudar o prazo:",
+          opcoes_atualizacao,
+          key="select_atualizar_prazo",
+      )
+      novo_prazo = st.date_input(
+          "Novo prazo:", value=date.today(), key="data_novo_prazo"
+      )
+
+      if st.button("💾 Salvar novo prazo"):
+        idx_atualizar = int(tarefa_para_atualizar.split(":")[0])
+        tarefa_atual = tarefas_mestre[idx_atualizar]
+
+        # Mantém o texto original da tarefa
+        if isinstance(tarefa_atual, str):
+          texto_t = tarefa_atual
+        else:
+          texto_t = tarefa_atual.get("texto", "")
+
+        # Atualiza com o novo prazo
+        tarefas_mestre[idx_atualizar] = {
+            "texto": texto_t,
+            "prazo": novo_prazo.strftime("%Y-%m-%d"),
+        }
+        salvar_tarefas_mestre(tarefas_mestre)
+        st.success("Prazo atualizado com sucesso!")
+        st.rerun()
+
+      # Seção para Excluir Tarefa
       st.divider()
       st.subheader("🗑️ Gerenciar / Excluir")
 
-      # Cria uma lista com o texto das tarefas para o admin escolher qual apagar
       opcoes_exclusao = []
       for idx, t in enumerate(tarefas_mestre):
         if isinstance(t, str):
@@ -76,11 +117,12 @@ with st.sidebar:
           opcoes_exclusao.append(f"{idx}: {t.get('texto', '')}")
 
       tarefa_selecionada = st.selectbox(
-          "Selecione a tarefa para apagar:", opcoes_exclusao
+          "Selecione a tarefa para apagar:",
+          opcoes_exclusao,
+          key="select_excluir",
       )
 
       if st.button("❌ Excluir tarefa selecionada"):
-        # Pega o número do índice que está no começo da string (ex: "0: Tarefa")
         idx_para_remover = int(tarefa_selecionada.split(":")[0])
         tarefas_mestre.pop(idx_para_remover)
         salvar_tarefas_mestre(tarefas_mestre)
